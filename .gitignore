@@ -1,0 +1,14 @@
+# The live database and its WAL sidecars -- this is the business's real data.
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Exported workbooks
+*.xlsx
+~$*.xlsx
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/

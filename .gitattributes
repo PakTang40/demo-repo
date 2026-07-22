@@ -1,0 +1,11 @@
+# Normalise text in the repo, but pin the Windows launchers to CRLF on checkout.
+# เปิดระบบ.bat is parsed by cmd.exe by byte offset (see docs/adr/0006), so its
+# line endings must not vary by whoever clones it.
+* text=auto eol=lf
+
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+*.png binary
+*.db binary
+*.xlsx binary
