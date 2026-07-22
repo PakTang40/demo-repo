@@ -15,6 +15,7 @@ from __future__ import annotations
 import html as _html
 
 from .. import money
+from .live import LIVE_HTML
 
 # Type stacks resolve per-glyph: Latin lands on the serif, Thai falls through to
 # Leelawadee UI (present on every Windows 11 install). Numerals are forced to lining
@@ -510,6 +511,7 @@ def page(title: str, body: str, active: str = "/", building: str = "หอพั
   <span>{esc(building)}</span>
   <span>ระบบจัดการหอพัก · ข้อมูลเก็บในเครื่องนี้เท่านั้น</span>
 </footer>
+{LIVE_HTML}
 </body>
 </html>"""
 

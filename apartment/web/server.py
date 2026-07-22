@@ -20,7 +20,7 @@ from urllib.parse import parse_qs, quote, urlparse
 
 from .. import db, money, repo
 from ..billing import BillingError
-from . import finance, pages
+from . import finance, live, pages
 
 
 @dataclass
@@ -306,7 +306,9 @@ class Handler(BaseHTTPRequestHandler):
     db_path: Path | None = None
 
     def log_message(self, fmt, *args):  # quieter console
-        if not str(args[0]).startswith(("GET /static", "GET /favicon")):
+        # /api/version is polled every few seconds by every open page; logging it
+        # would bury the messages the owner actually needs to see.
+        if not str(args[0]).startswith(("GET /static", "GET /favicon", "GET /api/version")):
             super().log_message(fmt, *args)
 
     # -- dispatch -----------------------------------------------------------
@@ -317,6 +319,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._export_excel(parse_qs(parsed.query))
         if parsed.path == "/favicon.ico":
             return self._send(204, b"", "image/x-icon")
+        if parsed.path == "/api/version":
+            # Polled by every open page every few seconds, so it never touches
+            # SQLite -- two stat() calls, no connection, no query.
+            token = live.data_version(self.db_path)
+            return self._send(200, token.encode("ascii"), "text/plain; charset=utf-8")
         self._dispatch("GET", parsed.path, parse_qs(parsed.query), {})
 
     def do_POST(self):
