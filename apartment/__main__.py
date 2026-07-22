@@ -11,7 +11,7 @@ import datetime as dt
 import sys
 from pathlib import Path
 
-from . import db, money, repo, reports
+from . import db, money, net, repo, reports
 from .billing import BillingError
 
 
@@ -29,6 +29,15 @@ def cmd_init(args) -> int:
 def cmd_serve(args) -> int:
     from .web.server import serve
 
+    host = args.host
+    if host == "tailscale":
+        # Resolved before the database is touched: refusing to start is the whole
+        # point, and it should not leave a half-initialised database behind.
+        host = net.tailscale_ip()
+        if host is None:
+            print(net.NOT_READY)
+            return 1
+
     conn = db.connect(args.db)
     db.init_db(conn)
     if not repo.rooms(conn):
@@ -36,7 +45,7 @@ def cmd_serve(args) -> int:
         print("สร้างห้องเริ่มต้น 30 ห้องแล้ว")
     conn.close()
     serve(
-        host=args.host,
+        host=host,
         port=args.port,
         db_path=Path(args.db) if args.db else None,
         open_browser=args.open,
@@ -122,7 +131,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("serve", help="เปิดหน้าเว็บสำหรับใช้งานประจำวัน")
     p.add_argument("--host", default="127.0.0.1",
-                   help="ใช้ 0.0.0.0 เพื่อเปิดให้มือถือในวง Wi-Fi เดียวกันเข้าถึงได้")
+                   help="0.0.0.0 = มือถือในวง Wi-Fi เดียวกัน · "
+                        "tailscale = มือถือจากที่ไหนก็ได้ ผ่านเครือข่ายส่วนตัว")
     p.add_argument("--port", type=int, default=8765)
     p.add_argument("--open", action="store_true",
                    help="เปิดเบราว์เซอร์ให้อัตโนมัติเมื่อระบบพร้อม (ไฟล์ .bat ใช้ตัวเลือกนี้)")

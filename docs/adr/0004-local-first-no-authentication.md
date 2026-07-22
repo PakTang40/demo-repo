@@ -1,6 +1,9 @@
 # ADR-0004: Local-first, single operator, no authentication
 
-Status: accepted · 2026-07-22
+Status: accepted · 2026-07-22 · amended by
+[ADR-0007](0007-phones-reach-the-system-over-a-private-network.md), which extends
+the reachability boundary from the LAN to a private Tailscale network. The decision
+below stands; ADR-0007 argues that a tailnet is a narrowing of it, not an exception.
 
 ## Context
 

@@ -49,6 +49,11 @@ class TestLauncherBatch(unittest.TestCase):
         self.assertIn('--host "%HOST%"', text)
         self.assertIn('set "HOST=127.0.0.1"', text)
 
+    def test_phone_mode_asks_for_the_tailscale_interface_only(self):
+        """/lan binds every interface; on a cafe Wi-Fi that publishes tenant data."""
+        text = self.raw.decode("ascii")
+        self.assertIn('if /i "%~1"=="/phone" set "HOST=tailscale"', text)
+
     def test_stops_a_stale_server_before_starting(self):
         text = self.raw.decode("ascii")
         self.assertIn("stop-server.ps1", text)

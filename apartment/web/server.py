@@ -18,7 +18,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, urlparse
 
-from .. import db, money, repo
+from .. import db, money, net, repo
 from ..billing import BillingError
 from . import finance, live, pages
 
@@ -428,6 +428,19 @@ class _Server(ThreadingHTTPServer):
 ADDRESS_IN_USE = (10048, 48, 98)  # WSAEADDRINUSE, EADDRINUSE (BSD), EADDRINUSE (Linux)
 
 
+def browser_url(host: str, port: int) -> str:
+    """The address to actually open, which is not always the one we bound.
+
+    `0.0.0.0` is a bind wildcard, not somewhere a browser can go, and once we bind
+    a single interface -- the tailnet one -- `localhost` is no longer that
+    interface, so opening it hands the owner a connection-refused page on their
+    own machine.
+    """
+    if host in ("0.0.0.0", "127.0.0.1", "localhost", ""):
+        return f"http://localhost:{port}"
+    return f"http://{host}:{port}"
+
+
 def serve(
     host: str = "127.0.0.1",
     port: int = 8765,
@@ -447,11 +460,17 @@ def serve(
             raise SystemExit(1) from exc
         raise
 
-    url = f"http://localhost:{port}"
+    on_tailnet = net.in_tailnet(host)
+    url = browser_url(host, port)
+
     print("\n  ระบบจัดการหอพัก พร้อมใช้งานแล้ว")
     print(f"  เปิดเบราว์เซอร์ไปที่:  {url}")
-    if host == "0.0.0.0":
+    if on_tailnet:
+        print(f"  จากมือถือที่ไหนก็ได้ (เปิด Tailscale ค้างไว้): {url}")
+        print("  เครื่องที่ไม่ได้อยู่ในบัญชี Tailscale ของคุณ จะเข้าไม่ได้เลย")
+    elif host == "0.0.0.0":
         print(f"  จากมือถือในวง Wi-Fi เดียวกัน: http://<IP ของเครื่องนี้>:{port}")
+        print("  ⚠  ทุกเครื่องในวง Wi-Fi นี้เข้าได้ อย่าใช้โหมดนี้กับ Wi-Fi สาธารณะ")
     print(f"  ฐานข้อมูล: {db_path or db.DEFAULT_DB}")
     print("  กด Ctrl+C เพื่อปิดระบบ\n")
 

@@ -2,8 +2,10 @@
 REM ==========================================================================
 REM  Apartment management system - launcher
 REM
-REM    double-click this file   -> serve on this PC only
-REM    run with argument /lan   -> also reachable from a phone on the same Wi-Fi
+REM    double-click this file    -> serve on this PC only
+REM    run with argument /lan    -> also reachable from a phone on the same Wi-Fi
+REM    run with argument /phone  -> reachable from your own phones anywhere,
+REM                                 over Tailscale only. See docs\adr\0007.
 REM
 REM  KEEP THIS FILE ASCII-ONLY.
 REM  cmd.exe re-reads a batch file by byte offset while `chcp` changes how those
@@ -21,6 +23,7 @@ set "PYTHONIOENCODING=utf-8"
 
 set "HOST=127.0.0.1"
 if /i "%~1"=="/lan" set "HOST=0.0.0.0"
+if /i "%~1"=="/phone" set "HOST=tailscale"
 
 where python >nul 2>nul
 if errorlevel 1 (
