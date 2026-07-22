@@ -91,6 +91,19 @@ class TestVersionEndpoint(unittest.TestCase):
         with self.get("/api/version") as response:
             self.assertNotEqual(before, response.read().decode("utf-8"))
 
+    def test_merely_viewing_pages_does_not_move_the_token(self):
+        """Every request opens and closes its own connection, and closing the last
+        one can checkpoint the WAL. If that moved the token, every phone would
+        reload every three seconds forever -- the feature would be worse than none.
+        """
+        with self.get("/api/version") as response:
+            before = response.read().decode("utf-8")
+        for path in ("/", "/rooms", "/invoices", "/reports", "/expenses", "/settings"):
+            self.get(path).close()
+        with self.get("/api/version") as response:
+            self.assertEqual(before, response.read().decode("utf-8"),
+                             "reads must not look like writes")
+
     def test_every_page_carries_the_poller(self):
         with self.get("/") as response:
             self.assertIn("/api/version", response.read().decode("utf-8"))
