@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -90,15 +92,37 @@ def cmd_report(args) -> int:
     return 0
 
 
+def open_in_default_app(path: Path) -> None:
+    """Hand the workbook to whatever the owner has associated with .xlsx."""
+    try:
+        os.startfile(path)  # Windows; the only platform this system ships on
+    except AttributeError:
+        opener = "open" if sys.platform == "darwin" else "xdg-open"
+        subprocess.run([opener, str(path)], check=False)
+    except OSError as exc:
+        print(f"เปิดไฟล์อัตโนมัติไม่ได้ ({exc}) — เปิดเองได้ที่ {path.resolve()}")
+
+
 def cmd_export(args) -> int:
     from .excel import export_year
 
     conn = db.connect(args.db)
     payload = export_year(conn, args.year)
-    target = Path(args.out or f"apartment-{args.year}.xlsx")
-    target.write_bytes(payload)
-    print(f"บันทึกไฟล์ {target.resolve()} ({len(payload):,} bytes)")
     conn.close()
+
+    target = Path(args.out or f"apartment-{args.year}.xlsx")
+    try:
+        target.write_bytes(payload)
+    except PermissionError:
+        # Excel takes an exclusive lock, so the second export of the day fails
+        # here rather than anywhere interesting. Say which file, and why.
+        print(f"เขียนไฟล์ไม่ได้: {target.name} กำลังเปิดค้างอยู่ใน Excel")
+        print("ปิดไฟล์นั้นใน Excel ก่อน แล้วสั่งใหม่อีกครั้ง")
+        return 1
+
+    print(f"บันทึกไฟล์ {target.resolve()} ({len(payload):,} bytes)")
+    if args.open:
+        open_in_default_app(target)
     return 0
 
 
@@ -150,6 +174,8 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("export", help="ส่งออกข้อมูลทั้งปีเป็น Excel")
     p.add_argument("--year", type=int, default=dt.date.today().year)
     p.add_argument("--out")
+    p.add_argument("--open", action="store_true",
+                   help="เปิดไฟล์ใน Excel ให้เลยเมื่อสร้างเสร็จ (ไฟล์ .bat /excel ใช้ตัวเลือกนี้)")
     p.set_defaults(func=cmd_export)
 
     p = sub.add_parser("backup", help="สำรองฐานข้อมูล")
